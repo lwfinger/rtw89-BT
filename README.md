@@ -1,7 +1,7 @@
 # rtw89-BT
 Out-of-kernel driver for Realtek BT devices found in rtw89 devides.
 
-This driver has not been tested (yet) for builds with older kernels.
+This driver will build for kernels 5.15+.
 If you get build errors, please report them in this repo as an issue.
 I will make every attempt to backport the code to older kernels.
 
