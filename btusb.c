@@ -3534,11 +3534,19 @@ static void btusb_check_needs_reset_resume(struct usb_interface *intf)
 		interface_to_usbdev(intf)->quirks |= USB_QUIRK_RESET_RESUME;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 static bool btusb_wakeup(struct hci_dev *hdev)
+#else
+static bool btusb_prevent_wakeup(struct hci_dev *hdev)
+#endif
 {
 	struct btusb_data *data = hci_get_drvdata(hdev);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 	return device_may_wakeup(&data->udev->dev);
+#else
+	return !device_may_wakeup(&data->udev->dev);
+#endif
 }
 
 static int btusb_shutdown_qca(struct hci_dev *hdev)
@@ -3742,7 +3750,11 @@ static int btusb_probe(struct usb_interface *intf,
 	hdev->flush  = btusb_flush;
 	hdev->send   = btusb_send_frame;
 	hdev->notify = btusb_notify;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 	hdev->wakeup = btusb_wakeup;
+#else
+	hdev->prevent_wake = btusb_prevent_wakeup;
+#endif
 
 #ifdef CONFIG_PM
 	err = btusb_config_oob_wake(hdev);
