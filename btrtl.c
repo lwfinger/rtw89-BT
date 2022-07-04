@@ -268,7 +268,7 @@ static int rtl_read_rom_version(struct hci_dev *hdev, u8 *version)
 	/* Read RTL ROM version command */
 	skb = __hci_cmd_sync(hdev, 0xfc6d, 0, NULL, HCI_INIT_TIMEOUT);
 	if (IS_ERR(skb)) {
-		rtl_dev_err(hdev, "Read ROM version failed (%ld)",
+		rtl_dev_info(hdev, "Read ROM version failed (%ld)",
 			    PTR_ERR(skb));
 		return PTR_ERR(skb);
 	}
@@ -691,8 +691,10 @@ out_free:
 
 	if (btrtl_dev->ic_info->has_rom_version) {
 		ret = rtl_read_rom_version(hdev, &btrtl_dev->rom_version);
-		if (ret)
+		if (ret) {
+			pr_info("******* rtl_read_rom_version() failed\n");
 			goto err_free;
+		}
 	}
 
 	btrtl_dev->fw_len = rtl_load_file(hdev, btrtl_dev->ic_info->fw_name,
