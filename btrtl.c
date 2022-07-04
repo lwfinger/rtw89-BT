@@ -228,8 +228,13 @@ static const struct id_table *btrtl_match_ic(u16 lmp_subver, u16 hci_rev,
 
 		break;
 	}
-	if (i >= ARRAY_SIZE(ic_id_table))
+	if (i >= ARRAY_SIZE(ic_id_table)) {
+		pr_info("******** lmp_subver 0x%x\n", lmp_subver);
+		pr_info("******** hci_rev 0x%x\n", hci_rev);
+		pr_info("******** hci_ver 0x%x\n", hci_ver);
+		pr_info("******** hci_bus 0x%x\n", hci_bus);
 		return NULL;
+	}
 
 	return &ic_id_table[i];
 }
