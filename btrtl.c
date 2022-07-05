@@ -803,11 +803,14 @@ int btrtl_setup_realtek(struct hci_dev *hdev)
 	struct btrtl_device_info *btrtl_dev;
 	int ret;
 
+	pr_info("*************** Entering btrtl_setup_realtek\n");
 	btrtl_dev = btrtl_initialize(hdev, NULL);
-	if (IS_ERR(btrtl_dev))
+	if (IS_ERR(btrtl_dev)) {
+		pr_info("************ btrtl_initialize failed with error %ld\n", PTR_ERR(btrtl_dev));
 		return PTR_ERR(btrtl_dev);
-
+	}
 	ret = btrtl_download_firmware(hdev, btrtl_dev);
+	pr_info("**************** Back from btrtl_download_firmware with ret = %d\n", ret);
 
 	btrtl_set_quirks(hdev, btrtl_dev);
 
