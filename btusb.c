@@ -3618,6 +3618,7 @@ static int btusb_probe(struct usb_interface *intf,
 
 	BT_DBG("intf %p id %p", intf, id);
 
+	pr_info("************** Entering %s, driver_info 0x%x\n", __func__, (int)id->driver_info);
 	/* interface numbers are hardcoded in the spec */
 	if (intf->cur_altsetting->desc.bInterfaceNumber != 0) {
 		if (!(id->driver_info & BTUSB_IFNUM_2))
@@ -3632,8 +3633,10 @@ static int btusb_probe(struct usb_interface *intf,
 		const struct usb_device_id *match;
 
 		match = usb_match_id(intf, blacklist_table);
+		pr_info("**************** output of usb_match_id %p\n", match);
 		if (match)
 			id = match;
+		pr_info("************** driver_info 0x%x\n", (int)id->driver_info);
 	}
 
 	if (id->driver_info == BTUSB_IGNORE)
@@ -3673,8 +3676,11 @@ static int btusb_probe(struct usb_interface *intf,
 		}
 	}
 
-	if (!data->intr_ep || !data->bulk_tx_ep || !data->bulk_rx_ep)
+	if (!data->intr_ep || !data->bulk_tx_ep || !data->bulk_rx_ep) {
+		pr_info("****************** data->intr_ep %p, data->bulk_tx_ep %p, data->bulk_rx_ep %p\n",
+			data->intr_ep, data->bulk_tx_ep, data->bulk_rx_ep);
 		return -ENODEV;
+	}
 
 	if (id->driver_info & BTUSB_AMP) {
 		data->cmdreq_type = USB_TYPE_CLASS | 0x01;
@@ -3740,6 +3746,7 @@ static int btusb_probe(struct usb_interface *intf,
 					GPIOD_OUT_LOW);
 	if (IS_ERR(reset_gpio)) {
 		err = PTR_ERR(reset_gpio);
+		pr_info("*************** gpiod_get_optional error %d]n", err);
 		goto out_free_dev;
 	} else if (reset_gpio) {
 		data->reset_gpio = reset_gpio;
@@ -3758,8 +3765,10 @@ static int btusb_probe(struct usb_interface *intf,
 
 #ifdef CONFIG_PM
 	err = btusb_config_oob_wake(hdev);
-	if (err)
+	if (err) {
+		pr_info("***************  btusb_config_oob_wake( error %d]n", err);
 		goto out_free_dev;
+	}
 
 	/* Marvell devices may need a specific chip configuration */
 	if (id->driver_info & BTUSB_MARVELL && data->oob_wake_irq) {
