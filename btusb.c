@@ -2089,7 +2089,9 @@ static int btusb_setup_csr(struct hci_dev *hdev)
 		 * without these the controller will lock up.
 		 */
 		set_bit(HCI_QUIRK_BROKEN_STORED_LINK_KEY, &hdev->quirks);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 		set_bit(HCI_QUIRK_BROKEN_ERR_DATA_REPORTING, &hdev->quirks);
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
 		set_bit(HCI_QUIRK_BROKEN_FILTER_CLEAR_ALL, &hdev->quirks);
 #endif
@@ -3376,7 +3378,9 @@ static int btusb_setup_qca(struct hci_dev *hdev)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
 	set_bit(HCI_QUIRK_BROKEN_ENHANCED_SETUP_SYNC_CONN, &hdev->quirks);
 #endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 	set_bit(HCI_QUIRK_BROKEN_ERR_DATA_REPORTING, &hdev->quirks);
+#endif
 
 	return 0;
 }
