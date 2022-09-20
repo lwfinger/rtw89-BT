@@ -15,7 +15,7 @@
 
 #include "btrtl.h"
 
-#define VERSION "0.1"
+#define VERSION "0.11"
 
 #define RTL_EPATCH_SIGNATURE	"Realtech"
 #define RTL_ROM_LMP_8723A	0x1200
