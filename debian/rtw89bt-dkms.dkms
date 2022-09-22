@@ -1,0 +1,9 @@
+PACKAGE_NAME="rtw89bt"
+PACKAGE_VERSION="#MODULE_VERSION#"
+BUILT_MODULE_NAME[0]="btrtl"
+BUILT_MODULE_NAME[1]="btusb"
+DEST_MODULE_LOCATION[0]="/updates/dkms"
+DEST_MODULE_LOCATION[1]="/updates/dkms"
+AUTOINSTALL="YES"
+# Set the acceptable kernel values
+BUILD_EXCLUSIVE_KERNEL="^(5\.1[5-9]\.|6.[0-9]+\.)"

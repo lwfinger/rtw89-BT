@@ -1,0 +1,6 @@
+rtl8852au_config.bin usr/lib/rtw89bt-firmware
+rtl8852au_fw.bin usr/lib/rtw89bt-firmware
+rtl8852bu_config.bin usr/lib/rtw89bt-firmware
+rtl8852bu_fw.bin usr/lib/rtw89bt-firmware
+rtl8852cu_config.bin usr/lib/rtw89bt-firmware
+rtl8852cu_fw.bin usr/lib/rtw89bt-firmware

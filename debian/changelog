@@ -1,0 +1,6 @@
+rtw89bt-dkms (1.0.0) jammy; urgency=medium
+
+  * Restrict applicable kernels to 5.15+
+  * Initial package.
+
+ -- Greg Whiteley <greg.whiteley@gmail.com>  Fri, 16 Sep 2022 22:42:44 +1000
