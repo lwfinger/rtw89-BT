@@ -88,5 +88,11 @@ sudo apt install ../rtw89bt-dkms_1.0.0_all.deb  ../rtw89bt-firmware_1.0.0_all.de
 ```
 
 That should install the package, and build the module for your
-currently active kernel.  You should then be able to `modprobe` as
+currently active kernel.  You should then be able to remove an
+old version and load the new one with the following:
+```bash
+sudo modprobe -rv btusb
+sudo modprobe -v btusb
+```
+
 above.
