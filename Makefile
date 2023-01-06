@@ -11,6 +11,14 @@ ifeq ("","$(wildcard MOK.der)")
 NO_SKIP_SIGN := y
 endif
 
+#Handle the compression option for modules in 3.18+
+ifneq ("","$(wildcard $(DRV_DIR)/*.ko.gz)")
+COMPRESS_GZIP := y
+endif
+ifneq ("","$(wildcard $(DRV_DIR)/*.ko.xz)")
+COMPRESS_XZ := y
+endif
+
 EXTRA_CFLAGS += -O2
 KEY_FILE ?= MOK.der
 
@@ -27,6 +35,14 @@ install: all
 
 	@mkdir -p $(MODDESTDIR)
 	@install -p -D -m 644 *.ko $(MODDESTDIR)
+ifeq ($(COMPRESS_GZIP), y)
+	@gzip -f $(DRV_DIR)/btusb.ko
+	@gzip -f $(DRV_DIR)/btrtl.ko
+endif
+ifeq ($(COMPRESS_XZ), y)
+	@xz -f $(DRV_DIR)/btusb.ko
+	@xz -f $(DRV_DIR)/btrtl.ko
+endif
 	@depmod -a $(KVER)
 
 	@mkdir -p /lib/firmware/rtl_bt/
