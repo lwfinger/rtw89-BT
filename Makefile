@@ -36,12 +36,12 @@ install: all
 	@mkdir -p $(MODDESTDIR)
 	@install -p -D -m 644 *.ko $(MODDESTDIR)
 ifeq ($(COMPRESS_GZIP), y)
-	@gzip -f $(DRV_DIR)/btusb.ko
-	@gzip -f $(DRV_DIR)/btrtl.ko
+	@gzip -f $(MODDESTDIR)/btusb.ko
+	@gzip -f $(MODDESTDIR)/btrtl.ko
 endif
 ifeq ($(COMPRESS_XZ), y)
-	@xz -f $(DRV_DIR)/btusb.ko
-	@xz -f $(DRV_DIR)/btrtl.ko
+	@xz -f $(MODDESTDIR)/btusb.ko
+	@xz -f $(MODDESTDIR)/btrtl.ko
 endif
 	@depmod -a $(KVER)
 
