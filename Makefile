@@ -12,10 +12,10 @@ NO_SKIP_SIGN := y
 endif
 
 #Handle the compression option for modules in 3.18+
-ifneq ("","$(wildcard $(DRV_DIR)/*.ko.gz)")
+ifneq ("","$(wildcard $(MODDESTDIR)/*.ko.gz)")
 COMPRESS_GZIP := y
 endif
-ifneq ("","$(wildcard $(DRV_DIR)/*.ko.xz)")
+ifneq ("","$(wildcard $(MODDESTDIR)/*.ko.xz)")
 COMPRESS_XZ := y
 endif
 
