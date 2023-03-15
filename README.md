@@ -60,7 +60,8 @@ In the MOK managerment screen, select reset MOK list
 Reboot then retry from the step make sign-install
 
 
-# DKMS packaging for ubuntu/debian
+# DKMS
+## Packaging for ubuntu/debian
 
 DKMS on debian/ubuntu simplifies the secure-boot issues, signing is
 taken care of through the same mechanisms as nVidia and drivers.  You
@@ -96,3 +97,18 @@ sudo modprobe -v btusb
 ```
 
 above.
+
+
+## AUR package
+
+DKMS ensures new kernel installations will automatically
+rebuild the driver, so you can accept normal kernel updates.
+
+Example with paru:
+
+``` bash
+paru -S aur/rtw89bt-dkms-git
+```
+
+That should install the package, and build the module for your
+currently active kernel. 
