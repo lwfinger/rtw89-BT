@@ -1,3 +1,12 @@
+rtw89bt-dkms (1.0.0-1) unstable; urgency=medium
+
+  * Changes to match rtw89 wifi module package:
+    - Quilt (3.0) Packaging
+    - No longer packaging rtw89bt-firmware
+    - Enable builds on both debian and ubuntu 
+
+ -- Jesse Rhodes <jesse@sney.ca>  Tue, 21 Mar 2023 11:57:01 -0400
+
 rtw89bt-dkms (1.0.0) jammy; urgency=medium
 
   * Restrict applicable kernels to 5.15+

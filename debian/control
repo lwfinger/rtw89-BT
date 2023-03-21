@@ -2,24 +2,27 @@ Source: rtw89bt-dkms
 Section: kernel
 Priority: optional
 Maintainer: Greg Whiteley <greg.whiteley@gmail.com>
-Build-Depends: debhelper (>= 11), dkms, dh-modaliases
+Build-Depends: debhelper (>= 11), dh-sequence-dkms
 Standards-Version: 4.1.3
 Vcs-Browser: https://github.com/lwfinger/rtw89-BT
 Vcs-Git: https://github.com/lwfinger/rtw89-BT
 
 Package: rtw89bt-dkms
 Architecture: all
-Depends: ${misc:Depends}, dkms, bc, rtw89bt-firmware
-XB-Modaliases: ${modaliases}
-Description: DKMS Driver for Realtek RTW89 devices
- Bluetooth drivers for the known Bluetooth parts of the following:
+Depends: ${misc:Depends}, bc
+Recommends: firmware-realtek (>=20230117-1) | linux-firmware (>=20220329.git681281e4-0ubuntu3.10)
+Description: dkms source for the Realtek rtw89bt driver
+ rtw89bt provides updated btrtl and btusb modules to support the 
+ integrated bluetooth components of the Realtek 8852AE, 
+ 8852BE, and 8853CE 802.11ax wireless network cards. 
  .
- * Realtek 8852AE, RTW8852BE, and RTW8852CE.
-
-Package: rtw89bt-firmware
-Architecture: all
-Depends: ${misc:Depends}
-Description: Firmware for Realtek RTW89 devices
- Bluetooth firmware drivers for the known Bluetooth parts of the following:
+ This package provides the rtw89-bt source and makes use of the
+ DKMS build utility to install the modules for the running kernel. 
+ It is intended for use with kernel versions 5.15+. 
  .
- * Realtek 8852AE, RTW8852BE, and RTW8852CE.
+ Kernel source or headers are required to build these modules. 
+ .
+ Firmware from userspace is required to use the driver; 
+ if your distro does not provide one of the packages in the Recommends 
+ field above, you can download it directly from
+ https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git.
