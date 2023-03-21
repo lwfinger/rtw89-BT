@@ -18,6 +18,8 @@ For **Ubuntu**: You can install them with the following command
 sudo apt-get update
 sudo apt-get install make gcc linux-headers-$(uname -r) build-essential git
 ```
+Users of Debian, Ubuntu, and similar (Mint etc) may want to scroll down and follow the DKMS instructions at the end of this document instead.
+
 For **Fedora**: You can install them with the following command
 ```bash
 sudo dnf install kernel-headers kernel-devel
@@ -60,22 +62,23 @@ In the MOK managerment screen, select reset MOK list
 Reboot then retry from the step make sign-install
 
 
-# DKMS packaging for ubuntu/debian
+# DKMS packaging for debian and derivatives
 
-DKMS on debian/ubuntu simplifies the secure-boot issues, signing is
-taken care of through the same mechanisms as nVidia and drivers.  You
-won't need special reboot and MOK registration.
+DKMS is commonly used on debian and derivatives, like ubuntu, to streamline building extra kernel modules.  
+By following the instructions below and installing the resulting package, the rtw89 driver will automatically rebuild on kernel updates. Secure boot signing will happen automatically as well, 
+as long as the dkms signing key (usually located at /var/lib/dkms/mok.key) is enrolled. See your distro's secure boot documentation for more details. 
 
-Additionally DKMS ensures new kernel installations will automatically
-rebuild the driver, so you can accept normal kernel updates.
 
 Prerequisites:
 
-A few packages are required to build the debs from source:
 
 ``` bash
-sudo apt install dkms debhelper dh-modaliases
+sudo apt install dh-sequence-dkms debhelper build-essential devscripts
 ```
+
+This workflow uses devscripts, which has quite a few perl dependencies.  
+You may wish to build inside a chroot to avoid unnecessary clutter on your system. The debian wiki page for [chroot](https://wiki.debian.org/chroot) has simple instructions for debian, which you can adapt to other distros as needed by changing the release codename and mirror url.  
+If you do, make sure to install the package on your host system, as it will fail if you try to install inside the chroot. 
 
 Build and installation
 
@@ -83,16 +86,25 @@ Build and installation
 # If you've already built as above clean up your workspace or check one out specially (otherwise some temp files can end up in your package)
 git clean -xfd
 
+git deborig HEAD
 dpkg-buildpackage -us -uc
-sudo apt install ../rtw89bt-dkms_1.0.0_all.deb  ../rtw89bt-firmware_1.0.0_all.deb
+sudo apt install ../rtw89bt-dkms_1.0.0_all.deb
 ```
 
-That should install the package, and build the module for your
-currently active kernel.  You should then be able to remove an
-old version and load the new one with the following:
+This will install the package, and build the module for your
+currently active kernel. The new module will load automatically on boot. 
+You can also load it right away, but because it has the same module name
+as the mainline bluetooth usb driver, that one needs to be unloaded first.
+This can be done with the following commands:
 ```bash
 sudo modprobe -rv btusb
 sudo modprobe -v btusb
 ```
 
-above.
+##### A note regarding firmware
+
+Firmware from userspace is required to use this driver. This package will attempt to pull the firmware in automatically as a Recommends.
+However, if your distro does not provide one of firmware-realtek >= 20230117-1 or linux-firmware >= 20220329.git681281e4-0ubuntu3.10, 
+the driver will fail to load, and dmesg will show an error about a specific missing firmware file. In this case, you can download the firmware files 
+directly from https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/tree/rtl_bt.
+
