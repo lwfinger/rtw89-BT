@@ -46,7 +46,6 @@ endif
 	@depmod -a $(KVER)
 
 	@mkdir -p /lib/firmware/rtl_bt/
-	@cp *.bin /lib/firmware/rtl_bt/.
 
 	@echo "Install btusb/btrtl SUCCESS"
 
