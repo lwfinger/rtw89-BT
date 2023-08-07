@@ -17,8 +17,8 @@
 #include <linux/suspend.h>
 #include <linux/gpio/consumer.h>
 #include <linux/debugfs.h>
-#include <linux/version.h>
 #include <asm/unaligned.h>
+#include <linux/version.h>
 
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
@@ -28,11 +28,12 @@
 #include "btrtl.h"
 #include "btmtk.h"
 
-#define VERSION "0.81"
+#define VERSION "0.8"
 
 static bool disable_scofix;
 static bool force_scofix;
 static bool enable_autosuspend = IS_ENABLED(CONFIG_BT_HCIBTUSB_AUTOSUSPEND);
+static bool enable_poll_sync = IS_ENABLED(CONFIG_BT_HCIBTUSB_POLL_SYNC);
 static bool reset = true;
 
 static struct usb_driver btusb_driver;
@@ -64,11 +65,9 @@ static struct usb_driver btusb_driver;
 #define BTUSB_INTEL_BROKEN_SHUTDOWN_LED	BIT(24)
 #define BTUSB_INTEL_BROKEN_INITIAL_NCMD BIT(25)
 #define BTUSB_INTEL_NO_WBS_SUPPORT	BIT(26)
+#define BTUSB_ACTIONS_SEMI		BIT(27)
 
 static const struct usb_device_id btusb_table[] = {
-	/* Special entry for rtw8852au */
-	{ USB_DEVICE(0x0cb8, 0xc549), .driver_info = BTUSB_REALTEK |
-						     BTUSB_WIDEBAND_SPEECH },
 	/* Generic Bluetooth USB device */
 	{ USB_DEVICE_INFO(0xe0, 0x01, 0x01) },
 
@@ -320,6 +319,90 @@ static const struct usb_device_id blacklist_table[] = {
 	{ USB_DEVICE(0x0489, 0xe0d0), .driver_info = BTUSB_QCA_WCN6855 |
 						     BTUSB_WIDEBAND_SPEECH |
 						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9108), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9109), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9208), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9209), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9308), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9408), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9508), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9509), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9608), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9609), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x10ab, 0x9f09), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x04ca, 0x3022), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0c7), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0c9), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0ca), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0cb), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0ce), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0de), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0df), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0e1), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0ea), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0ec), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x04ca, 0x3023), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x04ca, 0x3024), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x04ca, 0x3a22), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x04ca, 0x3a24), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x04ca, 0x3a26), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x04ca, 0x3a27), .driver_info = BTUSB_QCA_WCN6855 |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
 
 	/* QCA WCN785x chipset */
 	{ USB_DEVICE(0x0cf3, 0xe700), .driver_info = BTUSB_QCA_WCN6855 |
@@ -411,10 +494,18 @@ static const struct usb_device_id blacklist_table[] = {
 	{ USB_VENDOR_AND_INTERFACE_INFO(0x8087, 0xe0, 0x01, 0x01),
 	  .driver_info = BTUSB_IGNORE },
 
+	/* Realtek 8821CE Bluetooth devices */
+	{ USB_DEVICE(0x13d3, 0x3529), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
+
 	/* Realtek 8822CE Bluetooth devices */
 	{ USB_DEVICE(0x0bda, 0xb00c), .driver_info = BTUSB_REALTEK |
 						     BTUSB_WIDEBAND_SPEECH },
 	{ USB_DEVICE(0x0bda, 0xc822), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
+
+	/* Realtek 8822CU Bluetooth devices */
+	{ USB_DEVICE(0x13d3, 0x3549), .driver_info = BTUSB_REALTEK |
 						     BTUSB_WIDEBAND_SPEECH },
 
 	/* Realtek 8852AE Bluetooth devices */
@@ -432,10 +523,28 @@ static const struct usb_device_id blacklist_table[] = {
 						     BTUSB_WIDEBAND_SPEECH },
 	{ USB_DEVICE(0x0cb8, 0xc549), .driver_info = BTUSB_REALTEK |
 						     BTUSB_WIDEBAND_SPEECH },
-	{ USB_DEVICE(0x0cb8, 0xc559), .driver_info = BTUSB_REALTEK |
+
+	/* Realtek 8852CE Bluetooth devices */
+	{ USB_DEVICE(0x04ca, 0x4007), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
+	{ USB_DEVICE(0x04c5, 0x1675), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
+	{ USB_DEVICE(0x0cb8, 0xc558), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
+	{ USB_DEVICE(0x13d3, 0x3587), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
+	{ USB_DEVICE(0x13d3, 0x3586), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
+	{ USB_DEVICE(0x13d3, 0x3592), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
+
+	/* Realtek 8851BE Bluetooth device */
+	{ USB_DEVICE(0x0bda, 0xb85e), .driver_info = BTUSB_REALTEK |
 						     BTUSB_WIDEBAND_SPEECH },
 
 	/* Realtek 8852BE Bluetooth devices */
+	{ USB_DEVICE(0x0cb8, 0xc559), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
 	{ USB_DEVICE(0x0bda, 0x4853), .driver_info = BTUSB_REALTEK |
 						     BTUSB_WIDEBAND_SPEECH },
 	{ USB_DEVICE(0x0bda, 0x887b), .driver_info = BTUSB_REALTEK |
@@ -460,6 +569,9 @@ static const struct usb_device_id blacklist_table[] = {
 	{ USB_DEVICE(0x043e, 0x310c), .driver_info = BTUSB_MEDIATEK |
 						     BTUSB_WIDEBAND_SPEECH |
 						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x04ca, 0x3801), .driver_info = BTUSB_MEDIATEK |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
 
 	/* Additional MediaTek MT7668 Bluetooth devices */
 	{ USB_DEVICE(0x043e, 0x3109), .driver_info = BTUSB_MEDIATEK |
@@ -468,6 +580,12 @@ static const struct usb_device_id blacklist_table[] = {
 
 	/* Additional MediaTek MT7921 Bluetooth devices */
 	{ USB_DEVICE(0x0489, 0xe0c8), .driver_info = BTUSB_MEDIATEK |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0e0), .driver_info = BTUSB_MEDIATEK |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0f2), .driver_info = BTUSB_MEDIATEK |
 						     BTUSB_WIDEBAND_SPEECH |
 						     BTUSB_VALID_LE_STATES },
 	{ USB_DEVICE(0x04ca, 0x3802), .driver_info = BTUSB_MEDIATEK |
@@ -482,7 +600,16 @@ static const struct usb_device_id blacklist_table[] = {
 	{ USB_DEVICE(0x13d3, 0x3567), .driver_info = BTUSB_MEDIATEK |
 						     BTUSB_WIDEBAND_SPEECH |
 						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x13d3, 0x3578), .driver_info = BTUSB_MEDIATEK |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x13d3, 0x3583), .driver_info = BTUSB_MEDIATEK |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
 	{ USB_DEVICE(0x0489, 0xe0cd), .driver_info = BTUSB_MEDIATEK |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0e8d, 0x0608), .driver_info = BTUSB_MEDIATEK |
 						     BTUSB_WIDEBAND_SPEECH |
 						     BTUSB_VALID_LE_STATES },
 
@@ -491,6 +618,18 @@ static const struct usb_device_id blacklist_table[] = {
 						     BTUSB_WIDEBAND_SPEECH |
 						     BTUSB_VALID_LE_STATES },
 	{ USB_DEVICE(0x0489, 0xe0d9), .driver_info = BTUSB_MEDIATEK |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x13d3, 0x3568), .driver_info = BTUSB_MEDIATEK |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0e2), .driver_info = BTUSB_MEDIATEK |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0e4), .driver_info = BTUSB_MEDIATEK |
+						     BTUSB_WIDEBAND_SPEECH |
+						     BTUSB_VALID_LE_STATES },
+	{ USB_DEVICE(0x0489, 0xe0f2), .driver_info = BTUSB_MEDIATEK |
 						     BTUSB_WIDEBAND_SPEECH |
 						     BTUSB_VALID_LE_STATES },
 
@@ -514,18 +653,18 @@ static const struct usb_device_id blacklist_table[] = {
 	{ USB_DEVICE(0x0bda, 0xb009), .driver_info = BTUSB_REALTEK },
 	{ USB_DEVICE(0x2ff8, 0xb011), .driver_info = BTUSB_REALTEK },
 
-	/* Additional Realtek 8761B Bluetooth devices */
+	/* Additional Realtek 8761BUV Bluetooth devices */
 	{ USB_DEVICE(0x2357, 0x0604), .driver_info = BTUSB_REALTEK |
 						     BTUSB_WIDEBAND_SPEECH },
-
-	/* Additional Realtek 8761BU Bluetooth devices */
 	{ USB_DEVICE(0x0b05, 0x190e), .driver_info = BTUSB_REALTEK |
 	  					     BTUSB_WIDEBAND_SPEECH },
 	{ USB_DEVICE(0x2550, 0x8761), .driver_info = BTUSB_REALTEK |
 						     BTUSB_WIDEBAND_SPEECH },
-
-	/* Additional Realtek 8761BUV Bluetooth devices */
 	{ USB_DEVICE(0x0bda, 0x8771), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
+	{ USB_DEVICE(0x7392, 0xc611), .driver_info = BTUSB_REALTEK |
+						     BTUSB_WIDEBAND_SPEECH },
+	{ USB_DEVICE(0x2b89, 0x8761), .driver_info = BTUSB_REALTEK |
 						     BTUSB_WIDEBAND_SPEECH },
 
 	/* Additional Realtek 8821AE Bluetooth devices */
@@ -563,6 +702,9 @@ static const struct usb_device_id blacklist_table[] = {
 	{ USB_DEVICE(0x0cb5, 0xc547), .driver_info = BTUSB_REALTEK |
 						     BTUSB_WIDEBAND_SPEECH },
 
+	/* Actions Semiconductor ATS2851 based devices */
+	{ USB_DEVICE(0x10d7, 0xb012), .driver_info = BTUSB_ACTIONS_SEMI },
+
 	/* Silicon Wave based devices */
 	{ USB_DEVICE(0x0c10, 0x0000), .driver_info = BTUSB_SWAVE },
 
@@ -598,6 +740,16 @@ static const struct dmi_system_id btusb_needs_reset_resume_table[] = {
 	{}
 };
 
+struct qca_dump_info {
+	/* fields for dump collection */
+	u16 id_vendor;
+	u16 id_product;
+	u32 fw_version;
+	u32 controller_id;
+	u32 ram_dump_size;
+	u16 ram_dump_seqno;
+};
+
 #define BTUSB_MAX_ISOC_FRAMES	10
 
 #define BTUSB_INTR_RUNNING	0
@@ -616,6 +768,8 @@ static const struct dmi_system_id btusb_needs_reset_resume_table[] = {
 #define BTUSB_TX_WAIT_VND_EVT	13
 #define BTUSB_WAKEUP_AUTOSUSPEND	14
 #define BTUSB_USE_ALT3_FOR_WBS	15
+#define BTUSB_ALT6_CONTINUOUS_TX	16
+#define BTUSB_HW_SSR_ACTIVE	17
 
 struct btusb_data {
 	struct hci_dev       *hdev;
@@ -678,7 +832,33 @@ struct btusb_data {
 
 	int oob_wake_irq;   /* irq for out-of-band wake-on-bt */
 	unsigned cmd_timeout_cnt;
+
+	struct qca_dump_info qca_dump;
 };
+
+static void btusb_reset(struct hci_dev *hdev)
+{
+	struct btusb_data *data;
+	int err;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 2, 0)
+	if (hdev->reset) {
+		hdev->reset(hdev);
+		return;
+	}
+#endif
+
+	data = hci_get_drvdata(hdev);
+	/* This is not an unbalanced PM reference since the device will reset */
+	err = usb_autopm_get_interface(data->intf);
+	if (err) {
+		bt_dev_err(hdev, "Failed usb_autopm_get_interface: %d", err);
+		return;
+	}
+
+	bt_dev_err(hdev, "Resetting usb device.");
+	usb_queue_reset_device(data->intf);
+}
 
 static void btusb_intel_cmd_timeout(struct hci_dev *hdev)
 {
@@ -689,7 +869,7 @@ static void btusb_intel_cmd_timeout(struct hci_dev *hdev)
 		return;
 
 	if (!reset_gpio) {
-		bt_dev_err(hdev, "No way to reset. Ignoring and continuing");
+		btusb_reset(hdev);
 		return;
 	}
 
@@ -720,7 +900,7 @@ static void btusb_rtl_cmd_timeout(struct hci_dev *hdev)
 		return;
 
 	if (!reset_gpio) {
-		bt_dev_err(hdev, "No gpio to reset Realtek device, ignoring");
+		btusb_reset(hdev);
 		return;
 	}
 
@@ -745,7 +925,11 @@ static void btusb_qca_cmd_timeout(struct hci_dev *hdev)
 {
 	struct btusb_data *data = hci_get_drvdata(hdev);
 	struct gpio_desc *reset_gpio = data->reset_gpio;
-	int err;
+
+	if (test_bit(BTUSB_HW_SSR_ACTIVE, &data->flags)) {
+		bt_dev_info(hdev, "Ramdump in progress, defer cmd_timeout");
+		return;
+	}
 
 	if (++data->cmd_timeout_cnt < 5)
 		return;
@@ -771,13 +955,7 @@ static void btusb_qca_cmd_timeout(struct hci_dev *hdev)
 		return;
 	}
 
-	bt_dev_err(hdev, "Multiple cmd timeouts seen. Resetting usb device.");
-	/* This is not an unbalanced PM reference since the device will reset */
-	err = usb_autopm_get_interface(data->intf);
-	if (!err)
-		usb_queue_reset_device(data->intf);
-	else
-		bt_dev_err(hdev, "Failed usb_autopm_get_interface with %d", err);
+	btusb_reset(hdev);
 }
 
 static inline void btusb_free_frags(struct btusb_data *data)
@@ -786,13 +964,13 @@ static inline void btusb_free_frags(struct btusb_data *data)
 
 	spin_lock_irqsave(&data->rxlock, flags);
 
-	kfree_skb(data->evt_skb);
+	dev_kfree_skb_irq(data->evt_skb);
 	data->evt_skb = NULL;
 
-	kfree_skb(data->acl_skb);
+	dev_kfree_skb_irq(data->acl_skb);
 	data->acl_skb = NULL;
 
-	kfree_skb(data->sco_skb);
+	dev_kfree_skb_irq(data->sco_skb);
 	data->sco_skb = NULL;
 
 	spin_unlock_irqrestore(&data->rxlock, flags);
@@ -936,6 +1114,34 @@ static int btusb_recv_bulk(struct btusb_data *data, void *buffer, int count)
 	return err;
 }
 
+static bool btusb_validate_sco_handle(struct hci_dev *hdev,
+				      struct hci_sco_hdr *hdr)
+{
+	__u16 handle;
+
+	if (hci_dev_test_flag(hdev, HCI_USER_CHANNEL))
+		// Can't validate, userspace controls everything.
+		return true;
+
+	/*
+	 * USB isochronous transfers are not designed to be reliable and may
+	 * lose fragments.  When this happens, the next first fragment
+	 * encountered might actually be a continuation fragment.
+	 * Validate the handle to detect it and drop it, or else the upper
+	 * layer will get garbage for a while.
+	 */
+
+	handle = hci_handle(__le16_to_cpu(hdr->handle));
+
+	switch (hci_conn_lookup_type(hdev, handle)) {
+	case SCO_LINK:
+	case ESCO_LINK:
+		return true;
+	default:
+		return false;
+	}
+}
+
 static int btusb_recv_isoc(struct btusb_data *data, void *buffer, int count)
 {
 	struct sk_buff *skb;
@@ -968,9 +1174,12 @@ static int btusb_recv_isoc(struct btusb_data *data, void *buffer, int count)
 
 		if (skb->len == HCI_SCO_HDR_SIZE) {
 			/* Complete SCO header */
-			hci_skb_expect(skb) = hci_sco_hdr(skb)->dlen;
+			struct hci_sco_hdr *hdr = hci_sco_hdr(skb);
 
-			if (skb_tailroom(skb) < hci_skb_expect(skb)) {
+			hci_skb_expect(skb) = hdr->dlen;
+
+			if (skb_tailroom(skb) < hci_skb_expect(skb) ||
+			    !btusb_validate_sco_handle(data->hdev, hdr)) {
 				kfree_skb(skb);
 				skb = NULL;
 
@@ -1031,10 +1240,8 @@ static void btusb_intr_complete(struct urb *urb)
 		if (err != -EPERM && err != -ENODEV)
 			bt_dev_err(hdev, "urb %p failed to resubmit (%d)",
 				   urb, -err);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 		if (err != -EPERM)
 			hci_cmd_sync_cancel(hdev, -err);
-#endif
 		usb_unanchor_urb(urb);
 	}
 }
@@ -1078,10 +1285,12 @@ static int btusb_submit_intr_urb(struct hci_dev *hdev, gfp_t mem_flags)
 		if (err != -EPERM && err != -ENODEV)
 			bt_dev_err(hdev, "urb %p submission failed (%d)",
 				   urb, -err);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 		if (err != -EPERM)
+//#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 			hci_cmd_sync_cancel(hdev, -err);
-#endif
+//#else
+//			hci_req_sync_cancel(hdev, -err);
+//#endif
 		usb_unanchor_urb(urb);
 	}
 
@@ -1254,10 +1463,16 @@ static void btusb_isoc_complete(struct urb *urb)
 static inline void __fill_isoc_descriptor_msbc(struct urb *urb, int len,
 					       int mtu, struct btusb_data *data)
 {
-	int i, offset = 0;
+	int i = 0, offset = 0;
 	unsigned int interval;
 
 	BT_DBG("len %d mtu %d", len, mtu);
+
+	/* For mSBC ALT 6 settings some chips need to transmit the data
+	 * continuously without the zero length of USB packets.
+	 */
+	if (test_bit(BTUSB_ALT6_CONTINUOUS_TX, &data->flags))
+		goto ignore_usb_alt6_packet_flow;
 
 	/* For mSBC ALT 6 setting the host will send the packet at continuous
 	 * flow. As per core spec 5, vol 4, part B, table 2.1. For ALT setting
@@ -1278,6 +1493,7 @@ static inline void __fill_isoc_descriptor_msbc(struct urb *urb, int len,
 		urb->iso_frame_desc[i].length = offset;
 	}
 
+ignore_usb_alt6_packet_flow:
 	if (len && i < BTUSB_MAX_ISOC_FRAMES) {
 		urb->iso_frame_desc[i].offset = offset;
 		urb->iso_frame_desc[i].length = len;
@@ -1462,9 +1678,11 @@ static void btusb_tx_complete(struct urb *urb)
 	if (!urb->status) {
 		hdev->stat.byte_tx += urb->transfer_buffer_length;
 	} else {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 		if (hci_skb_pkt_type(skb) == HCI_COMMAND_PKT)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
 			hci_cmd_sync_cancel(hdev, -urb->status);
+#else
+			hci_req_sync_cancel(hdev, -urb->status);
 #endif
 		hdev->stat.err_tx++;
 	}
@@ -1784,6 +2002,13 @@ static int btusb_send_frame(struct hci_dev *hdev, struct sk_buff *skb)
 
 		hdev->stat.sco_tx++;
 		return submit_tx_urb(hdev, urb);
+
+	case HCI_ISODATA_PKT:
+		urb = alloc_bulk_urb(hdev, skb);
+		if (IS_ERR(urb))
+			return PTR_ERR(urb);
+
+		return submit_or_queue_tx_urb(hdev, urb);
 	}
 
 	return -EILSEQ;
@@ -1954,10 +2179,11 @@ static void btusb_work(struct work_struct *work)
 		if (btusb_switch_alt_setting(hdev, new_alts) < 0)
 			bt_dev_err(hdev, "set USB alt:(%d) failed!", new_alts);
 	} else {
-		clear_bit(BTUSB_ISOC_RUNNING, &data->flags);
 		usb_kill_anchored_urbs(&data->isoc_anchor);
 
-		__set_isoc_interface(hdev, 0);
+		if (test_and_clear_bit(BTUSB_ISOC_RUNNING, &data->flags))
+			__set_isoc_interface(hdev, 0);
+
 		if (test_and_clear_bit(BTUSB_DID_ISO_RESUME, &data->flags))
 			usb_autopm_put_interface(data->isoc ? data->isoc : data->intf);
 	}
@@ -2021,13 +2247,24 @@ static int btusb_setup_csr(struct hci_dev *hdev)
 		return err;
 	}
 
-	if (skb->len != sizeof(struct hci_rp_read_local_version)) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+	rp = skb_pull_data(skb, sizeof(*rp));
+#else
+	rp = (struct hci_rp_read_local_version *)skb->data;
+	skb_pull(skb, sizeof(*rp));
+#endif
+	if (!rp) {
 		bt_dev_err(hdev, "CSR: Local version length mismatch");
 		kfree_skb(skb);
 		return -EIO;
 	}
 
-	rp = (struct hci_rp_read_local_version *)skb->data;
+	bt_dev_info(hdev, "CSR: Setting up dongle with HCI ver=%u rev=%04x",
+		    rp->hci_ver, le16_to_cpu(rp->hci_rev));
+
+	bt_dev_info(hdev, "LMP ver=%u subver=%04x; manufacturer=%u",
+		    rp->lmp_ver, le16_to_cpu(rp->lmp_subver),
+		    le16_to_cpu(rp->manufacturer));
 
 	/* Detect a wide host of Chinese controllers that aren't CSR.
 	 *
@@ -2057,29 +2294,29 @@ static int btusb_setup_csr(struct hci_dev *hdev)
 	 *      third-party BT 4.0 dongle reuses it.
 	 */
 	else if (le16_to_cpu(rp->lmp_subver) <= 0x034e &&
-		 le16_to_cpu(rp->hci_ver) > BLUETOOTH_VER_1_1)
+		 rp->hci_ver > BLUETOOTH_VER_1_1)
 		is_fake = true;
 
 	else if (le16_to_cpu(rp->lmp_subver) <= 0x0529 &&
-		 le16_to_cpu(rp->hci_ver) > BLUETOOTH_VER_1_2)
+		 rp->hci_ver > BLUETOOTH_VER_1_2)
 		is_fake = true;
 
 	else if (le16_to_cpu(rp->lmp_subver) <= 0x0c5c &&
-		 le16_to_cpu(rp->hci_ver) > BLUETOOTH_VER_2_0)
+		 rp->hci_ver > BLUETOOTH_VER_2_0)
 		is_fake = true;
 
 	else if (le16_to_cpu(rp->lmp_subver) <= 0x1899 &&
-		 le16_to_cpu(rp->hci_ver) > BLUETOOTH_VER_2_1)
+		 rp->hci_ver > BLUETOOTH_VER_2_1)
 		is_fake = true;
 
 	else if (le16_to_cpu(rp->lmp_subver) <= 0x22bb &&
-		 le16_to_cpu(rp->hci_ver) > BLUETOOTH_VER_4_0)
+		 rp->hci_ver > BLUETOOTH_VER_4_0)
 		is_fake = true;
 
 	/* Other clones which beat all the above checks */
 	else if (bcdDevice == 0x0134 &&
 		 le16_to_cpu(rp->lmp_subver) == 0x0c5c &&
-		 le16_to_cpu(rp->hci_ver) == BLUETOOTH_VER_2_0)
+		 rp->hci_ver == BLUETOOTH_VER_2_0)
 		is_fake = true;
 
 	if (is_fake) {
@@ -2091,9 +2328,7 @@ static int btusb_setup_csr(struct hci_dev *hdev)
 		 * without these the controller will lock up.
 		 */
 		set_bit(HCI_QUIRK_BROKEN_STORED_LINK_KEY, &hdev->quirks);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
 		set_bit(HCI_QUIRK_BROKEN_ERR_DATA_REPORTING, &hdev->quirks);
-#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0)
 		set_bit(HCI_QUIRK_BROKEN_FILTER_CLEAR_ALL, &hdev->quirks);
 #endif
@@ -2193,16 +2428,51 @@ static int btusb_recv_bulk_intel(struct btusb_data *data, void *buffer,
 	return btusb_recv_bulk(data, buffer, count);
 }
 
+static int btusb_intel_diagnostics(struct hci_dev *hdev, struct sk_buff *skb)
+{
+	struct intel_tlv *tlv = (void *)&skb->data[5];
+
+	/* The first event is always an event type TLV */
+	if (tlv->type != INTEL_TLV_TYPE_ID)
+		goto recv_frame;
+
+	switch (tlv->val[0]) {
+	case INTEL_TLV_SYSTEM_EXCEPTION:
+	case INTEL_TLV_FATAL_EXCEPTION:
+	case INTEL_TLV_DEBUG_EXCEPTION:
+	case INTEL_TLV_TEST_EXCEPTION:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+		/* Generate devcoredump from exception */
+		if (!hci_devcd_init(hdev, skb->len)) {
+			hci_devcd_append(hdev, skb);
+			hci_devcd_complete(hdev);
+		} else {
+			bt_dev_err(hdev, "Failed to generate devcoredump");
+			kfree_skb(skb);
+		}
+#else
+		kfree_skb(skb);
+#endif
+		return 0;
+	default:
+		bt_dev_err(hdev, "Invalid exception type %02X", tlv->val[0]);
+	}
+
+recv_frame:
+	return hci_recv_frame(hdev, skb);
+}
+
 static int btusb_recv_event_intel(struct hci_dev *hdev, struct sk_buff *skb)
 {
-	if (btintel_test_flag(hdev, INTEL_BOOTLOADER)) {
-		struct hci_event_hdr *hdr = (void *)skb->data;
+	struct hci_event_hdr *hdr = (void *)skb->data;
+	const char diagnostics_hdr[] = { 0x87, 0x80, 0x03 };
 
-		if (skb->len > HCI_EVENT_HDR_SIZE && hdr->evt == 0xff &&
-		    hdr->plen > 0) {
-			const void *ptr = skb->data + HCI_EVENT_HDR_SIZE + 1;
-			unsigned int len = skb->len - HCI_EVENT_HDR_SIZE - 1;
+	if (skb->len > HCI_EVENT_HDR_SIZE && hdr->evt == 0xff &&
+	    hdr->plen > 0) {
+		const void *ptr = skb->data + HCI_EVENT_HDR_SIZE + 1;
+		unsigned int len = skb->len - HCI_EVENT_HDR_SIZE - 1;
 
+		if (btintel_test_flag(hdev, INTEL_BOOTLOADER)) {
 			switch (skb->data[2]) {
 			case 0x02:
 				/* When switching to the operational firmware
@@ -2220,6 +2490,15 @@ static int btusb_recv_event_intel(struct hci_dev *hdev, struct sk_buff *skb)
 				btintel_secure_send_result(hdev, ptr, len);
 				break;
 			}
+		}
+
+		/* Handle all diagnostics events separately. May still call
+		 * hci_recv_frame.
+		 */
+		if (len >= sizeof(diagnostics_hdr) &&
+		    memcmp(&skb->data[2], diagnostics_hdr,
+			   sizeof(diagnostics_hdr)) == 0) {
+			return btusb_intel_diagnostics(hdev, skb);
 		}
 	}
 
@@ -2281,9 +2560,29 @@ static int btusb_send_frame_intel(struct hci_dev *hdev, struct sk_buff *skb)
 
 		hdev->stat.sco_tx++;
 		return submit_tx_urb(hdev, urb);
+
+	case HCI_ISODATA_PKT:
+		urb = alloc_bulk_urb(hdev, skb);
+		if (IS_ERR(urb))
+			return PTR_ERR(urb);
+
+		return submit_or_queue_tx_urb(hdev, urb);
 	}
 
 	return -EILSEQ;
+}
+
+static int btusb_setup_realtek(struct hci_dev *hdev)
+{
+	struct btusb_data *data = hci_get_drvdata(hdev);
+	int ret;
+
+	ret = btrtl_setup_realtek(hdev);
+
+	if (btrealtek_test_flag(data->hdev, REALTEK_ALT6_CONTINUOUS_TX_CHIP))
+		set_bit(BTUSB_ALT6_CONTINUOUS_TX, &data->flags);
+
+	return ret;
 }
 
 /* UHW CR mapping */
@@ -2462,15 +2761,29 @@ static int btusb_mtk_hci_wmt_sync(struct hci_dev *hdev,
 
 	set_bit(BTUSB_TX_WAIT_VND_EVT, &data->flags);
 
+	/* WMT cmd/event doesn't follow up the generic HCI cmd/event handling,
+	 * it needs constantly polling control pipe until the host received the
+	 * WMT event, thus, we should require to specifically acquire PM counter
+	 * on the USB to prevent the interface from entering auto suspended
+	 * while WMT cmd/event in progress.
+	 */
+	err = usb_autopm_get_interface(data->intf);
+	if (err < 0)
+		goto err_free_wc;
+
 	err = __hci_cmd_send(hdev, 0xfc6f, hlen, wc);
 
 	if (err < 0) {
 		clear_bit(BTUSB_TX_WAIT_VND_EVT, &data->flags);
+		usb_autopm_put_interface(data->intf);
 		goto err_free_wc;
 	}
 
 	/* Submit control IN URB on demand to process the WMT event */
 	err = btusb_mtk_submit_wmt_recv_urb(hdev);
+
+	usb_autopm_put_interface(data->intf);
+
 	if (err < 0)
 		goto err_free_wc;
 
@@ -3027,6 +3340,211 @@ static int btusb_set_bdaddr_wcn6855(struct hci_dev *hdev,
 	return 0;
 }
 
+#define QCA_MEMDUMP_ACL_HANDLE 0x2EDD
+#define QCA_MEMDUMP_SIZE_MAX  0x100000
+#define QCA_MEMDUMP_VSE_CLASS 0x01
+#define QCA_MEMDUMP_MSG_TYPE 0x08
+#define QCA_MEMDUMP_PKT_SIZE 248
+#define QCA_LAST_SEQUENCE_NUM 0xffff
+
+struct qca_dump_hdr {
+	u8 vse_class;
+	u8 msg_type;
+	__le16 seqno;
+	u8 reserved;
+	union {
+		u8 data[0];
+		struct {
+			__le32 ram_dump_size;
+			u8 data0[0];
+		} __packed;
+	};
+} __packed;
+
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
+static void btusb_dump_hdr_qca(struct hci_dev *hdev, struct sk_buff *skb)
+{
+	char buf[128];
+	struct btusb_data *btdata = hci_get_drvdata(hdev);
+
+	snprintf(buf, sizeof(buf), "Controller Name: 0x%x\n",
+			btdata->qca_dump.controller_id);
+	skb_put_data(skb, buf, strlen(buf));
+
+	snprintf(buf, sizeof(buf), "Firmware Version: 0x%x\n",
+			btdata->qca_dump.fw_version);
+	skb_put_data(skb, buf, strlen(buf));
+
+	snprintf(buf, sizeof(buf), "Driver: %s\nVendor: qca\n",
+			btusb_driver.name);
+	skb_put_data(skb, buf, strlen(buf));
+
+	snprintf(buf, sizeof(buf), "VID: 0x%x\nPID:0x%x\n",
+			btdata->qca_dump.id_vendor, btdata->qca_dump.id_product);
+	skb_put_data(skb, buf, strlen(buf));
+
+	snprintf(buf, sizeof(buf), "Lmp Subversion: 0x%x\n",
+			hdev->lmp_subver);
+	skb_put_data(skb, buf, strlen(buf));
+}
+
+static void btusb_coredump_qca(struct hci_dev *hdev)
+{
+	static const u8 param[] = { 0x26 };
+	struct sk_buff *skb;
+
+	skb = __hci_cmd_sync(hdev, 0xfc0c, 1, param, HCI_CMD_TIMEOUT);
+	if (IS_ERR(skb))
+		bt_dev_err(hdev, "%s: triggle crash failed (%ld)", __func__, PTR_ERR(skb));
+	kfree_skb(skb);
+}
+#endif
+/*
+ * ==0: not a dump pkt.
+ * < 0: fails to handle a dump pkt
+ * > 0: otherwise.
+ */
+static int handle_dump_pkt_qca(struct hci_dev *hdev, struct sk_buff *skb)
+{
+	int ret = 1;
+	u8 pkt_type;
+	u8 *sk_ptr;
+	unsigned int sk_len;
+	u16 seqno;
+	u32 dump_size;
+
+	struct hci_event_hdr *event_hdr;
+	struct hci_acl_hdr *acl_hdr;
+	struct qca_dump_hdr *dump_hdr;
+	struct btusb_data *btdata = hci_get_drvdata(hdev);
+	struct usb_device *udev = btdata->udev;
+
+	pkt_type = hci_skb_pkt_type(skb);
+	sk_ptr = skb->data;
+	sk_len = skb->len;
+
+	if (pkt_type == HCI_ACLDATA_PKT) {
+		acl_hdr = hci_acl_hdr(skb);
+		if (le16_to_cpu(acl_hdr->handle) != QCA_MEMDUMP_ACL_HANDLE)
+			return 0;
+		sk_ptr += HCI_ACL_HDR_SIZE;
+		sk_len -= HCI_ACL_HDR_SIZE;
+		event_hdr = (struct hci_event_hdr *)sk_ptr;
+	} else {
+		event_hdr = hci_event_hdr(skb);
+	}
+
+	if ((event_hdr->evt != HCI_VENDOR_PKT)
+		|| (event_hdr->plen != (sk_len - HCI_EVENT_HDR_SIZE)))
+		return 0;
+
+	sk_ptr += HCI_EVENT_HDR_SIZE;
+	sk_len -= HCI_EVENT_HDR_SIZE;
+
+	dump_hdr = (struct qca_dump_hdr *)sk_ptr;
+	if ((sk_len < offsetof(struct qca_dump_hdr, data))
+		|| (dump_hdr->vse_class != QCA_MEMDUMP_VSE_CLASS)
+	    || (dump_hdr->msg_type != QCA_MEMDUMP_MSG_TYPE))
+		return 0;
+
+	/*it is dump pkt now*/
+	seqno = le16_to_cpu(dump_hdr->seqno);
+	if (seqno == 0) {
+		set_bit(BTUSB_HW_SSR_ACTIVE, &btdata->flags);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+		dump_size = le32_to_cpu(dump_hdr->ram_dump_size);
+		if (!dump_size || (dump_size > QCA_MEMDUMP_SIZE_MAX)) {
+			ret = -EILSEQ;
+			bt_dev_err(hdev, "Invalid memdump size(%u)",
+				   dump_size);
+			goto out;
+		}
+
+		ret = hci_devcd_init(hdev, dump_size);
+		if (ret < 0) {
+			bt_dev_err(hdev, "memdump init error(%d)", ret);
+			goto out;
+		}
+
+		btdata->qca_dump.ram_dump_size = dump_size;
+		btdata->qca_dump.ram_dump_seqno = 0;
+		sk_ptr += offsetof(struct qca_dump_hdr, data0);
+		sk_len -= offsetof(struct qca_dump_hdr, data0);
+
+		usb_disable_autosuspend(udev);
+		bt_dev_info(hdev, "%s memdump size(%u)\n",
+			    (pkt_type == HCI_ACLDATA_PKT) ? "ACL" : "event",
+			    dump_size);
+#endif
+	} else {
+		sk_ptr += offsetof(struct qca_dump_hdr, data);
+		sk_len -= offsetof(struct qca_dump_hdr, data);
+	}
+
+	if (!btdata->qca_dump.ram_dump_size) {
+		ret = -EINVAL;
+		bt_dev_err(hdev, "memdump is not active");
+		goto out;
+	}
+
+	if ((seqno > btdata->qca_dump.ram_dump_seqno + 1) && (seqno != QCA_LAST_SEQUENCE_NUM)) {
+		dump_size = QCA_MEMDUMP_PKT_SIZE * (seqno - btdata->qca_dump.ram_dump_seqno - 1);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+		hci_devcd_append_pattern(hdev, 0x0, dump_size);
+		bt_dev_err(hdev,
+			   "expected memdump seqno(%u) is not received(%u)\n",
+			   btdata->qca_dump.ram_dump_seqno, seqno);
+		btdata->qca_dump.ram_dump_seqno = seqno;
+#endif
+		kfree_skb(skb);
+		return ret;
+	}
+
+	skb_pull(skb, skb->len - sk_len);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+	hci_devcd_append(hdev, skb);
+	btdata->qca_dump.ram_dump_seqno++;
+#endif
+	if (seqno == QCA_LAST_SEQUENCE_NUM) {
+		bt_dev_info(hdev,
+				"memdump done: pkts(%u), total(%u)\n",
+				btdata->qca_dump.ram_dump_seqno, btdata->qca_dump.ram_dump_size);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+		hci_devcd_complete(hdev);
+#endif
+		goto out;
+	}
+	return ret;
+
+out:
+	if (btdata->qca_dump.ram_dump_size)
+		usb_enable_autosuspend(udev);
+	btdata->qca_dump.ram_dump_size = 0;
+	btdata->qca_dump.ram_dump_seqno = 0;
+	clear_bit(BTUSB_HW_SSR_ACTIVE, &btdata->flags);
+
+	if (ret < 0)
+		kfree_skb(skb);
+	return ret;
+}
+
+static int btusb_recv_acl_qca(struct hci_dev *hdev, struct sk_buff *skb)
+{
+	if (handle_dump_pkt_qca(hdev, skb))
+		return 0;
+	return hci_recv_frame(hdev, skb);
+}
+
+static int btusb_recv_evt_qca(struct hci_dev *hdev, struct sk_buff *skb)
+{
+	if (handle_dump_pkt_qca(hdev, skb))
+		return 0;
+	return hci_recv_frame(hdev, skb);
+}
+
+
 #define QCA_DFU_PACKET_LEN	4096
 
 #define QCA_GET_TARGET_VERSION	0x09
@@ -3207,7 +3725,7 @@ static int btusb_setup_qca_load_rampatch(struct hci_dev *hdev,
 
 	if (ver_rom & ~0xffffU) {
 		rver_rom_high = le16_to_cpu(rver->rom_version_high);
-		rver_rom = le32_to_cpu(rver_rom_high << 16 | rver_rom_low);
+		rver_rom = rver_rom_high << 16 | rver_rom_low;
 	} else {
 		rver_rom = rver_rom_low;
 	}
@@ -3361,6 +3879,9 @@ static int btusb_setup_qca(struct hci_dev *hdev)
 	if (err < 0)
 		return err;
 
+	btdata->qca_dump.fw_version = le32_to_cpu(ver.patch_version);
+	btdata->qca_dump.controller_id = le32_to_cpu(ver.rom_version);
+
 	if (!(status & QCA_SYSCFG_UPDATED)) {
 		err = btusb_setup_qca_load_nvm(hdev, &ver, info);
 		if (err < 0)
@@ -3374,14 +3895,11 @@ static int btusb_setup_qca(struct hci_dev *hdev)
 			msleep(QCA_BT_RESET_WAIT_MS);
 	}
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
 	/* Mark HCI_OP_ENHANCED_SETUP_SYNC_CONN as broken as it doesn't seem to
 	 * work with the likes of HSP/HFP mSBC.
 	 */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
 	set_bit(HCI_QUIRK_BROKEN_ENHANCED_SETUP_SYNC_CONN, &hdev->quirks);
-#endif
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 0, 0)
-	set_bit(HCI_QUIRK_BROKEN_ERR_DATA_REPORTING, &hdev->quirks);
 #endif
 
 	return 0;
@@ -3545,18 +4063,12 @@ static void btusb_check_needs_reset_resume(struct usb_interface *intf)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 static bool btusb_wakeup(struct hci_dev *hdev)
-#else
-static bool btusb_prevent_wakeup(struct hci_dev *hdev)
-#endif
 {
 	struct btusb_data *data = hci_get_drvdata(hdev);
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 	return device_may_wakeup(&data->udev->dev);
-#else
-	return !device_may_wakeup(&data->udev->dev);
-#endif
 }
+#endif
 
 static int btusb_shutdown_qca(struct hci_dev *hdev)
 {
@@ -3627,14 +4139,9 @@ static int btusb_probe(struct usb_interface *intf,
 
 	BT_DBG("intf %p id %p", intf, id);
 
-	pr_info("************** Entering %s, driver_info 0x%x\n", __func__, (int)id->driver_info);
-	/* interface numbers are hardcoded in the spec */
-	if (intf->cur_altsetting->desc.bInterfaceNumber != 0) {
-		if (!(id->driver_info & BTUSB_IFNUM_2))
-			return -ENODEV;
-		if (intf->cur_altsetting->desc.bInterfaceNumber != 2)
-			return -ENODEV;
-	}
+	if ((id->driver_info & BTUSB_IFNUM_2) &&
+	    (intf->cur_altsetting->desc.bInterfaceNumber != 2))
+		return -ENODEV;
 
 	ifnum_base = intf->cur_altsetting->desc.bInterfaceNumber;
 
@@ -3642,10 +4149,8 @@ static int btusb_probe(struct usb_interface *intf,
 		const struct usb_device_id *match;
 
 		match = usb_match_id(intf, blacklist_table);
-		pr_info("**************** output of usb_match_id %p\n", match);
 		if (match)
 			id = match;
-		pr_info("************** driver_info 0x%x\n", (int)id->driver_info);
 	}
 
 	if (id->driver_info == BTUSB_IGNORE)
@@ -3685,11 +4190,8 @@ static int btusb_probe(struct usb_interface *intf,
 		}
 	}
 
-	if (!data->intr_ep || !data->bulk_tx_ep || !data->bulk_rx_ep) {
-		pr_info("****************** data->intr_ep %p, data->bulk_tx_ep %p, data->bulk_rx_ep %p\n",
-			data->intr_ep, data->bulk_tx_ep, data->bulk_rx_ep);
+	if (!data->intr_ep || !data->bulk_tx_ep || !data->bulk_rx_ep)
 		return -ENODEV;
-	}
 
 	if (id->driver_info & BTUSB_AMP) {
 		data->cmdreq_type = USB_TYPE_CLASS | 0x01;
@@ -3731,6 +4233,9 @@ static int btusb_probe(struct usb_interface *intf,
 		/* Override the rx handlers */
 		data->recv_event = btusb_recv_event_intel;
 		data->recv_bulk = btusb_recv_bulk_intel;
+	} else if (id->driver_info & BTUSB_REALTEK) {
+		/* Allocate extra space for Realtek device */
+		priv_size += sizeof(struct btrealtek_data);
 	}
 
 	data->recv_acl = hci_recv_frame;
@@ -3755,7 +4260,6 @@ static int btusb_probe(struct usb_interface *intf,
 					GPIOD_OUT_LOW);
 	if (IS_ERR(reset_gpio)) {
 		err = PTR_ERR(reset_gpio);
-		pr_info("*************** gpiod_get_optional error %d]n", err);
 		goto out_free_dev;
 	} else if (reset_gpio) {
 		data->reset_gpio = reset_gpio;
@@ -3768,16 +4272,12 @@ static int btusb_probe(struct usb_interface *intf,
 	hdev->notify = btusb_notify;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 16, 0)
 	hdev->wakeup = btusb_wakeup;
-#else
-	hdev->prevent_wake = btusb_prevent_wakeup;
 #endif
 
 #ifdef CONFIG_PM
 	err = btusb_config_oob_wake(hdev);
-	if (err) {
-		pr_info("***************  btusb_config_oob_wake( error %d]n", err);
+	if (err)
 		goto out_free_dev;
-	}
 
 	/* Marvell devices may need a specific chip configuration */
 	if (id->driver_info & BTUSB_MARVELL && data->oob_wake_irq) {
@@ -3818,7 +4318,7 @@ static int btusb_probe(struct usb_interface *intf,
 
 	/* Combined Intel Device setup to support multiple setup routine */
 	if (id->driver_info & BTUSB_INTEL_COMBINED) {
-		err = btintel_configure_setup(hdev);
+		err = btintel_configure_setup(hdev, btusb_driver.name);
 		if (err)
 			goto out_free_dev;
 
@@ -3846,6 +4346,9 @@ static int btusb_probe(struct usb_interface *intf,
 		hdev->manufacturer = 70;
 		hdev->cmd_timeout = btusb_mtk_cmd_timeout;
 		hdev->set_bdaddr = btmtk_set_bdaddr;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+		set_bit(HCI_QUIRK_BROKEN_ENHANCED_SETUP_SYNC_CONN, &hdev->quirks);
+#endif
 		set_bit(HCI_QUIRK_NON_PERSISTENT_SETUP, &hdev->quirks);
 		data->recv_acl = btusb_recv_acl_mtk;
 	}
@@ -3876,6 +4379,13 @@ static int btusb_probe(struct usb_interface *intf,
 	}
 
 	if (id->driver_info & BTUSB_QCA_WCN6855) {
+		data->qca_dump.id_vendor = id->idVendor;
+		data->qca_dump.id_product = id->idProduct;
+		data->recv_event = btusb_recv_evt_qca;
+		data->recv_acl = btusb_recv_acl_qca;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
+		hci_devcd_register(hdev, btusb_coredump_qca, btusb_dump_hdr_qca, NULL);
+#endif
 		data->setup_on_usb = btusb_setup_qca;
 		hdev->shutdown = btusb_shutdown_qca;
 		hdev->set_bdaddr = btusb_set_bdaddr_wcn6855;
@@ -3895,14 +4405,27 @@ static int btusb_probe(struct usb_interface *intf,
 
 	if (IS_ENABLED(CONFIG_BT_HCIBTUSB_RTL) &&
 	    (id->driver_info & BTUSB_REALTEK)) {
-		pr_info("***************** configuring Realtek callbacks\n");
-		hdev->setup = btrtl_setup_realtek;
+		hdev->setup = btusb_setup_realtek;
 		hdev->shutdown = btrtl_shutdown_realtek;
 		hdev->cmd_timeout = btusb_rtl_cmd_timeout;
 
 		/* Realtek devices need to set remote wakeup on auto-suspend */
 		set_bit(BTUSB_WAKEUP_AUTOSUSPEND, &data->flags);
 		set_bit(BTUSB_USE_ALT3_FOR_WBS, &data->flags);
+	}
+
+	if (id->driver_info & BTUSB_ACTIONS_SEMI) {
+		/* Support is advertised, but not implemented */
+		set_bit(HCI_QUIRK_BROKEN_ERR_DATA_REPORTING, &hdev->quirks);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+		set_bit(HCI_QUIRK_BROKEN_READ_TRANSMIT_POWER, &hdev->quirks);
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
+		set_bit(HCI_QUIRK_BROKEN_SET_RPA_TIMEOUT, &hdev->quirks);
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 2, 0)
+		set_bit(HCI_QUIRK_BROKEN_EXT_SCAN, &hdev->quirks);
+#endif
 	}
 
 	if (!reset)
@@ -3980,6 +4503,8 @@ static int btusb_probe(struct usb_interface *intf,
 
 	if (enable_autosuspend)
 		usb_enable_autosuspend(data->udev);
+
+	data->poll_sync = enable_poll_sync;
 
 	err = hci_register_dev(hdev);
 	if (err < 0)
@@ -4188,6 +4713,19 @@ done:
 }
 #endif
 
+#ifdef CONFIG_DEV_COREDUMP
+static void btusb_coredump(struct device *dev)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 4, 0)
+	struct btusb_data *data = dev_get_drvdata(dev);
+	struct hci_dev *hdev = data->hdev;
+
+	if (hdev->dump.coredump)
+		hdev->dump.coredump(hdev);
+#endif
+}
+#endif
+
 static struct usb_driver btusb_driver = {
 	.name		= "btusb",
 	.probe		= btusb_probe,
@@ -4199,6 +4737,14 @@ static struct usb_driver btusb_driver = {
 	.id_table	= btusb_table,
 	.supports_autosuspend = 1,
 	.disable_hub_initiated_lpm = 1,
+
+#ifdef CONFIG_DEV_COREDUMP
+	.drvwrap = {
+		.driver = {
+			.coredump = btusb_coredump,
+		},
+	},
+#endif
 };
 
 module_usb_driver(btusb_driver);
