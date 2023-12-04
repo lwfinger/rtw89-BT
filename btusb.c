@@ -2501,7 +2501,8 @@ static int btusb_mtk_hci_wmt_sync(struct hci_dev *hdev,
 		err = -ETIMEDOUT;
 		goto err_free_wc;
 	}
-
+	if (data->evt_skb == NULL)
+		goto err_free_wc;
 	/* Parse and handle the return WMT event */
 	wmt_evt = (struct btmtk_hci_wmt_evt *)data->evt_skb->data;
 	if (wmt_evt->whdr.op != hdr->op) {
