@@ -23,6 +23,8 @@ KEY_FILE ?= MOK.der
 
 obj-m	+= btusb.o
 obj-m		+= btrtl.o
+obj-m	+= btmtk.o
+obj-m	+= btintel.o
 
 ccflags-y += -D__CHECK_ENDIAN__
 
